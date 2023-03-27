@@ -49,6 +49,10 @@ function ResponsesLikelihood(max_depth)
     )
 end
 
+function responses(rl::ResponsesLikelihood)
+    @view rl.responses[1:rl.length]
+end
+
 function showqa(io::IO, rl::ResponsesLikelihood)
     print(io, "*$(length(rl))*  ")
     for i in 1:length(rl)
@@ -230,8 +234,23 @@ end
 function DecisionTree(max_depth)
     DecisionTree(
         questions=Vector{UInt32}(undef, tree_size(max_depth)),
-        ability_estimates=Vector{Float32}(undef, tree_size(max_depth))
+        ability_estimates=Vector{Float32}(undef, tree_size(max_depth + 1))
     )
+end
+
+function responses_idx(responses)
+    (length(responses) > 0 ? evalpoly(2, responses) : 0) + 2^length(responses)
+end
+
+function Base.insert!(dt::DecisionTree, responses, ability, next_item)
+    idx = responses_idx(responses)
+    dt.questions[idx] = next_item
+    dt.ability_estimates[idx] = ability
+end
+
+function Base.insert!(dt::DecisionTree, responses, ability)
+    idx = responses_idx(responses)
+    dt.ability_estimates[idx] = ability
 end
 
 Base.@kwdef struct ParameterBasedPruningBuffers
@@ -358,7 +377,7 @@ function DecisionTreeGenerationState(item_bank::ItemBankT, max_depth)
     rough_best = RoughBest(FastForwardOrdering(), ceil(Int, sqrt(num_items) + 3), margin)
     DecisionTreeGenerationState(
         item_bank=ItemBank(item_bank),
-        likelihood=ResponsesLikelihood(max_depth),
+        likelihood=ResponsesLikelihood(max_depth + 1), # +1 for final ability estimates
         state_tree=TreePosition(max_depth),
         decision_tree_result=DecisionTree(max_depth),
         parameter_pruning=ParameterBasedPruningBuffers(num_items),
@@ -429,7 +448,21 @@ function generate_dt_cat_exhaustive_point_ability(state::DecisionTreeGenerationS
             #prob = ir(x)``
             #add_to_rough_best!(rough_best, item_idx, expected_var)
         #end
-        next_item = state.rough_best.best_idxs[1]
+        @timeit "select next item and add to dt" begin
+            next_item = state.rough_best.best_idxs[1]
+            insert!(state.decision_tree_result, responses(state.likelihood), ability, next_item)
+            if state.state_tree.cur_depth == state.state_tree.max_depth
+                @timeit "final state ability calculation" begin
+                    for resp in [false, true]
+                        resize!(state.likelihood, state.state_tree.cur_depth)
+                        push_question_response!(state.likelihood, state.item_bank, next_item, resp)
+                        lh_quad_xs, lh_quad_ws = state.weighted_gauss(state.likelihood, -10.0f0, 10.0f0, 1f-3)
+                        ability = calc_ability(state, lh_quad_xs, lh_quad_ws)
+                        insert!(state.decision_tree_result, responses(state.likelihood), ability)
+                    end
+                end
+            end
+        end
 
         @timeit "move to next node" begin
             ## Step ___. Move to next position within the tree
