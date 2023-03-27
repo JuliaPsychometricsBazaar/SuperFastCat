@@ -1,8 +1,9 @@
 using QuadGK
-#using Random: Xoshiro
 using Base.Iterators: take
-
-include("./run.jl")
+using Random: Xoshiro
+using SuperFastCat
+using SuperFastCat: precompute, idxr_slip, idxr_guess, idxr_difficulty, idxr_discrimination, push_question_response!, showqa
+using StatsBase
 
 
 const lo = -10.0f0
