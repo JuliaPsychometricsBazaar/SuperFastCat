@@ -416,7 +416,7 @@ function generate_dt_cat_exhaustive_point_ability(state::DecisionTreeGenerationS
                     # XXX: Could be faster to get all outcomes from the ItemResponse at the same time
                     (var, _, _) = var_mean_and_c(lh_quad_xs, lh_quad_ws, state.ir_fx)
                     expected_var += prob * var
-                    end
+                end
                 add_to_rough_best!(state.rough_best, item_idx, expected_var)
             end
         end
