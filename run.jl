@@ -50,10 +50,12 @@ function ResponsesLikelihood(max_depth)
 end
 
 function showqa(io::IO, rl::ResponsesLikelihood)
-    print(io, "questions\tresponses\n")
+    print(io, "*$(length(rl))*  ")
     for i in 1:length(rl)
-        print(io, "$(rl.questions[i])\t$(rl.responses[i])\n")
+        sym = rl.responses[i] ? "✔" : "✘"
+        print(io, "q$(rl.questions[i]): $sym, ")
     end
+    println()
 end
 
 function push_question_response!(lh::ResponsesLikelihood, item_bank::ItemBank, question, response)
