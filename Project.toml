@@ -2,6 +2,7 @@
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 FillArrays = "1a297f60-69ca-5386-bcde-b61e274b549b"
 FittedItemBanks = "3f797b09-34e4-41d7-acf6-3302ae3248a5"
+JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819"
 LogExpFunctions = "2ab3a3ac-af41-5b50-aa03-7779005ae688"
 LoopVectorization = "bdcacae8-1622-11e9-2a5c-532679323890"
 PushVectors = "36b54c61-190e-5a5f-82d5-6f0a962d7362"

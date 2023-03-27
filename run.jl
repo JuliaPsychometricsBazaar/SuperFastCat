@@ -8,6 +8,7 @@ using QuickHeaps: FastForwardOrdering
 using TimerOutputs
 using Base: Threads
 using FillArrays
+using JLD2
 
 include("./pushvectors.jl")
 
@@ -499,6 +500,7 @@ function main()
     end
     print_timer()
     @info "dt_cat" dt_cat
+    jldsave("dt.jld2"; questions=dt_cat.questions, abilities=dt_cat.ability_estimates)
 end
 
 using SnoopPrecompile
