@@ -128,11 +128,11 @@ function (wg::WeightedGauss)(W, a, b, rtol, quad=quadgk)
         q_0,q_1,v = q_1,v,q_0
     end
 
-    E = eigen!(SymTridiagonal(wg.alpha, wg.beta[2:wg.N]))
+    E = eigen!(SymTridiagonal((@view wg.alpha[begin:end]), (@view wg.beta[2:wg.N])))
 
     xs = @view wg.points_buf[:, 1]
     ws = @view wg.points_buf[:, 2]
-    ws .= wint .* abs2.(E.vectors[1,:])
+    ws .= wint .* abs2.(@view E.vectors[1,:])
     xs .= (E.values .+ 1) ./ xscale .+ a
     return (xs, ws)
 end
