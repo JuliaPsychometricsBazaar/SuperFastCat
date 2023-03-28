@@ -1,3 +1,16 @@
+"""
+This script looks at the magnitude of the normalising constant used for
+calcuating the mean/variance of the ability likelihood functions in for a CAT.
+It compares them with a few heurisitcs, which could be used to scale the
+factors of the likelihood to avoid underflow. It also looks at when subnormals
+begin to appear at sampled quadrature points.
+
+TODO:
+ * Use realistic fixed quadrature points rather (or probably in addition to) than adaptive ones
+   * Are some of the problems mitigated by precomputed quadrature
+ * Consider also more realisitic response patterns
+ * Make some charts
+"""
 using QuadGK
 using Base.Iterators: take
 using Random: Xoshiro
