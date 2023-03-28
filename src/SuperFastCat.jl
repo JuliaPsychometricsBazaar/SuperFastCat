@@ -82,12 +82,12 @@ function push_question_response!(lh::ResponsesLikelihood, item_bank::ItemBank, q
         yc = idxr_ir_neg_y_c
         ym = idxr_ir_neg_y_m
     end
-    lh.affines[lh.length, :] .= [
+    lh.affines[lh.length, :] .= (
         question_affs[idxr_x_c],
         question_affs[idxr_x_m],
         question_affs[yc],
         question_affs[ym],
-    ]
+    )
 end
 
 function Base.length(lh::ResponsesLikelihood)
