@@ -522,4 +522,6 @@ using SnoopPrecompile
     end
 end
 
+include("./Slow.jl")
+
 end
