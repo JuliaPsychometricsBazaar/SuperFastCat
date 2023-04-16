@@ -21,7 +21,8 @@ include("./dummydata.jl")
 include("./wgauss.jl")
 
 export DecisionTreeGenerationState, ResponsesLikelihood, ItemBank
-export zero_subnormals_all, clumpy_4pl_item_bank, generate_dt_cat_exhaustive_point_ability
+export zero_subnormals_all, generate_dt_cat_exhaustive_point_ability
+export random_responses, clumpy_4pl_item_bank, push_question_response!
 
 Base.@kwdef struct ItemBank
     params::ItemBankT
