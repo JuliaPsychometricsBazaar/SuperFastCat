@@ -145,8 +145,9 @@ end
 const logistic_normal_scaler = 1.702
 
 function precompute_x_affine_normal_as_logistic(params::ItemBankT, question)
-    c = -(params[question, idxr_difficulty] * logistic_normal_scaler) / params[question, idxr_discrimination]
-    m = logistic_normal_scaler / params[question, idxr_discrimination]
+    scaled_discrimination = logistic_normal_scaler * params[question, idxr_discrimination]
+    c = -(params[question, idxr_difficulty] * scaled_discrimination)
+    m = scaled_discrimination
     (c, m)
 end
 
