@@ -61,7 +61,7 @@ function amain()
     params = clumpy_4pl_item_bank(rng, 3, 100000)
     ib = ItemBank(params)
     precompute(ib)
-    lh  = ResponsesLikelihood(200)
+    lh = ResponsesLikelihood(200)
     println("## Single question")
     for question in [74063, 15595, 95108, 95355, 85876, 79905, 90598, 78013]
         for resp in [true, false]
@@ -93,9 +93,7 @@ function amain()
     for _ in 1:20
         println()
         resize!(lh, 0)
-        question_idxs = sample(rng, 1:size(params, 1), 100; replace=false)
-        resps = rand(rng, Bool, 100)
-        qrs = zip(question_idxs, resps)
+        qrs = random_responses(rng, length(ib), 100)
         for _ in 1:20
             for (q, r) in take(qrs, 5)
                 push_question_response!(lh, ib, q, r)
