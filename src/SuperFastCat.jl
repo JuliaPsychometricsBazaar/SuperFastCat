@@ -165,7 +165,7 @@ function precompute_y_affine(params::ItemBankT, question, response)
     return (y_c, y_m)
 end
 
-function precompute(item_bank::ItemBank)
+function precompute!(item_bank::ItemBank)
     # @fastmath @turbo 
     for item_idx in 1:length(item_bank)
         param_prec = @view item_bank.affines[item_idx, :]
@@ -407,10 +407,36 @@ function calc_ability(state::DecisionTreeGenerationState, x, w)::Float32
     end
 end
 
+function expected_var(item_bank, ir_fx_buf, lh_quad_xs, lh_quad_ws, ability, item_idx)::Float32
+    res = 0f0
+    @inbounds @fastmath for resp in false:true
+        ir = ItemResponse(item_bank.affines, item_idx, resp)
+        @turbo ir_fx_buf .= ir.(lh_quad_xs)
+        prob = ir(ability)
+        # XXX: Could be faster to get all outcomes from the ItemResponse at the same time
+        (var, _, _) = var_mean_and_c(lh_quad_xs, lh_quad_ws, ir_fx_buf)
+        res += prob * var
+    end
+    res 
+end
+
+#=function expected_var_turbo(state::DecisionTreeGenerationState, lh_quad_xs, lh_quad_ws, ability, item_idx)::Float32
+    res = 0f0
+    @fastmath @turbo for resp in false:true
+        ir = ItemResponse(state.item_bank.affines, item_idx, resp)
+        ir_fx = ir.(lh_quad_xs)
+        prob = ir(ability)
+        # XXX: Could be faster to get all outcomes from the ItemResponse at the same time
+        (var, _, _) = var_mean_and_c(lh_quad_xs, lh_quad_ws, ir_fx)
+        res += prob * var
+    end
+    res 
+end=#
+
 function generate_dt_cat_exhaustive_point_ability(state::DecisionTreeGenerationState)
     ## Step 0. Precompute item bank
     @timeit "precompute item bank" begin
-        precompute(state.item_bank)
+        precompute!(state.item_bank)
     end
 
     while true
@@ -437,16 +463,11 @@ function generate_dt_cat_exhaustive_point_ability(state::DecisionTreeGenerationS
                 if item_idx in questions(state.likelihood)
                     continue
                 end
-                expected_var = 0.0
-                for resp in (false, true)
-                    ir = ItemResponse(state.item_bank.affines, item_idx, resp)
-                    state.ir_fx .= ir.(lh_quad_xs)
-                    prob = ir(ability)
-                    # XXX: Could be faster to get all outcomes from the ItemResponse at the same time
-                    (var, _, _) = var_mean_and_c(lh_quad_xs, lh_quad_ws, state.ir_fx)
-                    expected_var += prob * var
-                end
-                add_to_rough_best!(state.rough_best, item_idx, expected_var)
+                #@info "expected_var" expected_var typeof(expected_var) isbits(expected_var)
+                #@timeit "add to rough best outer" begin
+                ev = expected_var(state.item_bank, state.ir_fx, lh_quad_xs, lh_quad_ws, ability, item_idx)
+                add_to_rough_best!(state.rough_best, item_idx, ev)
+                #end
             end
         end
         
