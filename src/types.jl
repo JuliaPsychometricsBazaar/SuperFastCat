@@ -5,7 +5,7 @@ hard to figure out which is zero-cost + contiguous + CUDA-compatible. Let's
 just do it C-style for now.
 =#
 # item bank
-const ItemBankT = Array{Float32, 2}
+const ItemBankT = Array{Float64, 2}
 const idxr_difficulty = 1
 const idxr_discrimination = 2
 const idxr_guess = 3
