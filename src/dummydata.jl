@@ -18,3 +18,9 @@ function clumpy_4pl_item_bank(rng, num_clumps, num_questions)
     end
     params
 end
+
+function random_responses(rng, num_questions, size)
+    question_idxs = sample(rng, 1:num_questions, size; replace=false)
+    resps = rand(rng, Bool, size)
+    zip(question_idxs, resps)
+end
