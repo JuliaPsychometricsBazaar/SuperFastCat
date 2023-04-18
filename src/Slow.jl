@@ -1,12 +1,16 @@
 module Slow
 
-using LogExpFunctions: logistic
+using LogExpFunctions: logistic as liblogistic
 using QuadGK
 
 import ..ResponsesLikelihood, ..logistic_normal_scaler
 import ..idxr_discrimination, ..idxr_difficulty, ..idxr_guess , ..idxr_slip 
 
 export SlowItemResponse, slow_likelihood, slow_mean_and_c, slow_var_mean_and_c, slow_expected_var
+
+
+logistic(x::Real) = liblogistic(x)
+logistic(x) = inv(exp(-x) + one(x))
 
 struct SlowItemResponse
     params::Matrix{Float64}
