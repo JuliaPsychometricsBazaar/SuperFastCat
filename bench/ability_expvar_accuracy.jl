@@ -2,7 +2,7 @@
 This gathers data by running the ability estimation and next item rules for a
 single random response pattern with increasing numbers of responses. It
 compares methods:
- * quadgk
+ * QuadGK
  * fixed gauss
  * weighted gauss
 
@@ -15,7 +15,7 @@ different setup may be needed for accurate timings.
 
 using QuadGK
 using SuperFastCat
-using SuperFastCat: precompute, WeightedGauss, questions, responses
+using SuperFastCat: precompute!, WeightedGauss, questions, responses
 using SuperFastCat: idxr_discrimination, idxr_difficulty, idxr_guess, idxr_slip, logistic_normal_scaler
 using SuperFastCat: mean_and_c, expected_var
 using SuperFastCat.Slow
@@ -28,12 +28,12 @@ const err_choices = (1f-3, 1f-5, 1f-7, 1f-9)
 
 include("./utils.jl")
 
-function main(outfn)
+function main(outfn, num_responses)
     rng = Xoshiro(42)
     params = clumpy_4pl_item_bank(rng, 3, 100000)
     item_bank = ItemBank(params)
-    precompute(item_bank)
-    lh = ResponsesLikelihood(101)
+    precompute!(item_bank)
+    lh = ResponsesLikelihood(num_responses + 1)
     weighted_gausses = Dict()
     normal_gausses = Dict()
     ir_fx = Dict()
@@ -43,7 +43,7 @@ function main(outfn)
         ir_fx[pts] = Vector{Float32}(undef, pts)
     end
     resize!(lh, 0)
-    qrs = random_responses(rng, length(item_bank), 100)
+    qrs = random_responses(rng, length(item_bank), num_responses)
     open_rec_writer(outfn) do rw
         for ((q, r), (next_q, _)) in partition(qrs, 2, 1)
             push_question_response!(lh, item_bank, q, r)
@@ -154,5 +154,5 @@ end
 
 
 if abspath(PROGRAM_FILE) == @__FILE__
-    main(ARGS[1])
+    main(ARGS[1], parse(Int, ARGS[2]))
 end

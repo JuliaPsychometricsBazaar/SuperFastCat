@@ -1,4 +1,4 @@
-duckdb $4 <<SQL
+duckdb <<SQL
 PRAGMA enable_progress_bar;
 INSTALL 'json';
 LOAD 'json';
@@ -19,5 +19,5 @@ COPY (
 	USING (quantity, lh_len)
     WHERE results.type != 'quadgk'
 	AND quadgk.type = 'quadgk'
-) TO '$2' (FORMAT 'csv', HEADER);
+) TO '$2' (FORMAT 'parquet');
 SQL
