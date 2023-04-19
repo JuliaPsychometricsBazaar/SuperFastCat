@@ -1,4 +1,4 @@
-duckdb $4 <<SQL
+duckdb <<SQL
 PRAGMA enable_progress_bar;
 INSTALL 'json';
 LOAD 'json';
