@@ -60,7 +60,7 @@ function amain()
     rng = Xoshiro(42)
     params = clumpy_4pl_item_bank(rng, 3, 100000)
     ib = ItemBank(params)
-    precompute(ib)
+    precompute!(ib)
     lh = ResponsesLikelihood(200)
     println("## Single question")
     for question in [74063, 15595, 95108, 95355, 85876, 79905, 90598, 78013]
