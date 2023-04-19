@@ -129,7 +129,7 @@ end
 
 LoopVectorization.can_turbo(::ItemResponse, ::Val{1}) = true
 
-function (ir::ItemResponse)(x::Float32)::Float32
+function (ir::ItemResponse)(x)
     affines = @view ir.affines[ir.question, :]
     xc = affines[idxr_x_c]
     xm = affines[idxr_x_m]
@@ -305,7 +305,7 @@ KnownReverseOrderings = ReverseOrdering{KnownForwardOrderings}
 apply_margin(::KnownForwardOrderings, measure, margin) = measure + margin
 apply_margin(::KnownReverseOrderings, measure, margin) = meaure - margin
 
-function add_to_rough_best!(bests::RoughBest, idx, measure)
+function add_to_rough_best!(bests::RoughBest, idx, measure::Float32)
     if length(bests.best_idxs) == 0
         # First item
         push!(bests.best_idxs, idx)
@@ -485,7 +485,7 @@ function generate_dt_cat_exhaustive_point_ability(state::DecisionTreeGenerationS
             insert!(state.decision_tree_result, responses(state.likelihood), ability, next_item)
             if state.state_tree.cur_depth == state.state_tree.max_depth
                 @timeit "final state ability calculation" begin
-                    for resp in [false, true]
+                    for resp in (false, true)
                         resize!(state.likelihood, state.state_tree.cur_depth)
                         push_question_response!(state.likelihood, state.item_bank, next_item, resp)
                         lh_quad_xs, lh_quad_ws = state.weighted_gauss(state.likelihood, -10.0f0, 10.0f0, 1f-3)
