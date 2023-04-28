@@ -162,7 +162,7 @@ function precompute_y_affine(params::ItemBankT, question, response)
         y_c = guess
         y_m = 1.0 - y_guess_slip 
     else
-        y_c = 1.0 - slip
+        y_c = 1.0 - guess
         y_m = y_guess_slip - 1.0
     end
     return (y_c, y_m)

@@ -27,7 +27,7 @@ function (ir::SlowItemResponse)(x)
     if ir.response
         muladd(range, logistic(a * logistic_normal_scaler * (x - b)), c)
     else
-        muladd(-range, logistic(a * logistic_normal_scaler * (x - b)), 1.0 - d)
+        muladd(-range, logistic(a * logistic_normal_scaler * (x - b)), 1.0 - c)
     end
 end
 
