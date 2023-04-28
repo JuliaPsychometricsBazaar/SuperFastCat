@@ -1,3 +1,8 @@
+"""
+This file is based on QuadGK.jl but modified to reduce the number of
+allocations.
+"""
+
 using LinearAlgebra: eigen!, SymTridiagonal
 
 # Constructing Gaussian quadrature weights for an
