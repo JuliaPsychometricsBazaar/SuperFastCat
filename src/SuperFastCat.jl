@@ -10,6 +10,7 @@ using QuickHeaps: FastForwardOrdering
 using TimerOutputs
 using Base: Threads
 using FillArrays
+using StaticArrays
 
 include("./pushvectors.jl")
 
@@ -451,5 +452,10 @@ using SnoopPrecompile
 end
 
 include("./Slow.jl")
+
+using IntervalArithmetic
+
+include("./intervalbest.jl")
+include("./iterqwk.jl")
 
 end
