@@ -19,7 +19,7 @@ function TreePosition(max_depth)
     )
 end
 
-function next!(state::TreePosition, lh::ResponsesLikelihood, item_bank::ItemBank, question, ability)
+function next!(state::TreePosition, lh, item_bank, question, ability)
     # Try to go deeper
     if state.cur_depth < state.max_depth
         state.parent_ability = ability
