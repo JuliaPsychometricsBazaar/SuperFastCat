@@ -274,7 +274,7 @@ end
 function Base.length(bests::RoughBest)
     length(bests.best_idxs)
 end
-    
+
 """
 This is all the state needed for decision tree
 `generate_dt_cat_exhaustive_point_ability`. The idea is that nothing (much)
@@ -306,9 +306,7 @@ Base.@kwdef struct DecisionTreeGenerationState
     rough_best::RoughBest
 end
 
-const rough_quad_points = 5
-
-function DecisionTreeGenerationState(item_bank::ItemBankT, max_depth)
+function DecisionTreeGenerationState(item_bank::ItemBankT, max_depth, weighted_quadpts=5)
     # XXX: This is hardcoded for now, but should be found based on error estimate
     margin::Float32 = 0.1
     num_items = size(item_bank, 1)
@@ -319,8 +317,8 @@ function DecisionTreeGenerationState(item_bank::ItemBankT, max_depth)
         state_tree=TreePosition(max_depth),
         decision_tree_result=DecisionTree(max_depth),
         parameter_pruning=ParameterBasedPruningBuffers(num_items),
-        weighted_gauss=WeightedGauss{Float32}(rough_quad_points),
-        ir_fx=Vector{Float32}(undef, rough_quad_points),
+        weighted_gauss=WeightedGauss{Float32}(weighted_quadpts),
+        ir_fx=Vector{Float32}(undef, weighted_quadpts),
         item_response_quadrature_buf=Vector{Float32}(undef, num_items),
         rough_best=rough_best 
     )
