@@ -454,6 +454,7 @@ using SnoopPrecompile
 end
 
 include("./Slow.jl")
+include("./slow_trees.jl")
 
 using IntervalArithmetic
 
