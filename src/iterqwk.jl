@@ -20,10 +20,6 @@ creates a worst-case error bound for the whole item bank.
 using QuadGK: kronrod
 using LinearAlgebra: norm
 
-#=struct GaussKronrodSegment
-    gw
-end=#
-
 function evalrule(fx, s, w, gw)
     # Ik and Ig are integrals via Kronrod and Gauss rules, respectively
     n1 = 1 - (length(w) & 1) # 0 if even order, 1 if odd order
@@ -45,79 +41,6 @@ function evalrule(fx, s, w, gw)
     Ik_s, Ig_s = Ik * s, Ig * s # new variable since this may change the type
     E = norm(Ik_s - Ig_s)
     return (Ik_s, E)
-end
-
-#=
-function do_quadgk(f::F, iqgk::IterativeQuadGK, s::NTuple{N,T}, n, atol, rtol, nrm, segbuf) where {T,N,F}
-    @assert N ≥ 2
-    igqk .= f.(iqgk.x)
-    segs = ntuple(i -> evalrule(f, s[i], s[i+1], , iqgk.w, iqgk.gw, nrm), Val{N-1}())
-    I = sum(s -> s.I, segs)
-    E = sum(s -> s.E, segs)
-
-    # logic here is mainly to handle dimensionful quantities: we
-    # don't know the correct type of atol115, in particular, until
-    # this point where we have the type of E from f.  Also, follow
-    # Base.isapprox in that if atol≠0 is supplied by the user, rtol
-    # defaults to zero.
-    atol_ = something(atol, zero(E))
-    rtol_ = something(rtol, iszero(atol_) ? sqrt(eps(one(eltype(x)))) : zero(eltype(x)))
-
-    # optimize common case of no subdivision
-    if E ≤ atol_ || E ≤ rtol_ * nrm(I)
-        return (I, E)
-    end
-
-    segheap = resize!(segbuf, N-1) .= segs
-    heapify!(segheap, Reverse)
-    return adapt(f, segheap, I, E, numevals, x,w,gw,n, atol_, rtol_, maxevals, nrm)
-end
-=#
-
-function adapt(f::F, segs::Vector{T}, I, E, numevals, x,w,gw,n, atol, rtol, maxevals, nrm) where {F, T}
-    # Pop the biggest-error segment and subdivide (h-adaptation)
-    # until convergence is achieved or maxevals is exceeded.
-    while E > atol && E > rtol * nrm(I) && numevals < maxevals
-        s = heappop!(segs, Reverse)
-        mid = (s.a + s.b) / 2
-        s1 = evalrule(f, s.a, mid, x,w,gw, nrm)
-        s2 = evalrule(f, mid, s.b, x,w,gw, nrm)
-        if f isa InplaceIntegrand
-            I .= (I .- s.I) .+ s1.I .+ s2.I
-        else
-            I = (I - s.I) + s1.I + s2.I
-        end
-        E = (E - s.E) + s1.E + s2.E
-        numevals += 4n+2
-
-        # handle type-unstable functions by converting to a wider type if needed
-        Tj = promote_type(typeof(s1), promote_type(typeof(s2), T))
-        if Tj !== T
-            return adapt(f, heappush!(heappush!(Vector{Tj}(segs), s1, Reverse), s2, Reverse),
-                         I, E, numevals, x,w,gw,n, atol, rtol, maxevals, nrm)
-        end
-
-        heappush!(segs, s1, Reverse)
-        heappush!(segs, s2, Reverse)
-    end
-
-    # re-sum (paranoia about accumulated roundoff)
-    if f isa InplaceIntegrand
-        I .= segs[1].I
-        E = segs[1].E
-        for i in 2:length(segs)
-            I .+= segs[i].I
-            E += segs[i].E
-        end
-    else
-        I = segs[1].I
-        E = segs[1].E
-        for i in 2:length(segs)
-            I += segs[i].I
-            E += segs[i].E
-        end
-    end
-    return (I, E)
 end
 
 struct ProgQuadGK
