@@ -181,7 +181,7 @@ function seg_unnorm_var(state::ProgQuadGKDecisionTreeGenerationState, seg_width,
     evalrule(state.lh_fx_interval, seg_width, state.prog_quadgk.w, state.prog_quadgk.gw)
 end
 
-depth_at_seg_idx(seg_idx) = 8sizeof(typeof(seg_idx)) * leading_zeros(seg_idx)
+depth_at_seg_idx(seg_idx) = 8sizeof(typeof(seg_idx)) - leading_zeros(seg_idx)
 seg_width_at_depth(total_width, depth) = total_width * 2f0 ^ (-depth)
 
 function refine_mean_and_c(state::ProgQuadGKDecisionTreeGenerationState, seg_width, ir, seg_idx)
