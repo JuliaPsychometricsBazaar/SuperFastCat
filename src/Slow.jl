@@ -35,24 +35,24 @@ function slow_likelihood(params, rl::ResponsesLikelihood, x)
     prod(SlowItemResponse(params, question, response)(x) for (question, response) in first(zip(rl.questions, rl.responses), length(rl)); init=1.0)
 end
 
-function slow_mean_and_c(lh, lo, hi)
-    mean, num_err = quadgk(x -> lh(x) * x, lo, hi)
-    c, denom_err = quadgk(lh, lo, hi)
+function slow_mean_and_c(lh, lo, hi; atol=nothing, rtol=nothing)
+    mean, num_err = quadgk(x -> lh(x) * x, lo, hi; atol=atol, rtol=rtol)
+    c, denom_err = quadgk(lh, lo, hi; atol=atol, rtol=rtol)
     (mean / c, c, num_err, denom_err)
 end
 
-function slow_var_mean_and_c(lh, lo, hi)
-    (mean, c, num_err, denom_err) = slow_mean_and_c(lh, lo, hi)
-    var, var_err = quadgk(x -> lh(x) * (x - mean) ^ 2, lo, hi)
+function slow_var_mean_and_c(lh, lo, hi; atol=nothing, rtol=nothing)
+    (mean, c, num_err, denom_err) = slow_mean_and_c(lh, lo, hi; atol=atol, rtol=rtol)
+    var, var_err = quadgk(x -> lh(x) * (x - mean) ^ 2, lo, hi; atol=atol, rtol=rtol)
     (var / c, mean, c, num_err, denom_err, var_err)
 end
 
-function slow_expected_var(params, rl, ability, item_idx, lo, hi)
+function slow_expected_var(params, rl, ability, item_idx, lo, hi; atol=nothing, rtol=nothing)
     res = 0.0
     for resp in (false, true)
         ir = SlowItemResponse(params, item_idx, resp)
         prob = ir(ability)
-        (var, _, _, _, _, _) = slow_var_mean_and_c(x -> slow_likelihood(params, rl, x) * ir(x), lo, hi)
+        (var, _, _, _, _, _) = slow_var_mean_and_c(x -> slow_likelihood(params, rl, x) * ir(x), lo, hi; atol=atol, rtol=rtol)
         res += prob * var
     end
     res 
