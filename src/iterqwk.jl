@@ -130,7 +130,7 @@ function ProgQuadGKDecisionTreeGenerationState(item_bank::ItemBankT, max_depth; 
         likelihood=ResponsesLikelihood(max_depth + 1), # +1 for final ability estimates
         state_tree=TreePosition(max_depth),
         decision_tree_result=DecisionTree(max_depth),
-        prog_quadgk=ProgQuadGK(quad_order, quad_max_depth, -10.0f0, 10.0f0),
+        prog_quadgk=ProgQuadGK(quad_order, quad_max_depth, theta_lo, theta_hi),
         lh_vals=Vector{Float32}(undef, num_segpts),
         lh_fx=Vector{Float32}(undef, num_segpts),
         lh_fx_interval=Vector{Interval{Float32}}(undef, num_segpts),
@@ -144,7 +144,7 @@ function calc_ability(state::ProgQuadGKDecisionTreeGenerationState)::Float32
         return 0.0f0
     else
         # TODO: use IterativeQuadGK instead of QuadGK here
-        return Slow.slow_mean_and_c(state.likelihood, -10.0f0, 10.0f0)[1]
+        return Slow.slow_mean_and_c(state.likelihood, theta_lo, theta_hi)[1]
     end
 end
 
@@ -199,7 +199,7 @@ function refined_var_estimate(state::ProgQuadGKDecisionTreeGenerationState, segs
     unnorm_var_err = 0f0
     for seg in segs
         depth = depth_at_seg_idx(seg.seg_idx)
-        seg_width = seg_width_at_depth(20.0f0, depth)
+        seg_width = seg_width_at_depth(theta_width, depth)
         seg_idx = seg.seg_idx
         seg_unnorm_var_pt, seg_unnorm_var_err = seg_unnorm_var(state, seg_width, ir, mean, seg_idx)
         unnorm_var_pt += seg_unnorm_var_pt
@@ -234,7 +234,7 @@ function generate_dt_cat_prog_quadgk_point_ability(state::ProgQuadGKDecisionTree
                         # TODO: Make prob an interval
                         # TODO: Add turbos
                         prob = ir(ability)
-                        res += prob * initial_var_estimate(state, 10.0f0, ir)
+                        res += prob * initial_var_estimate(state, theta_width / 2, ir)
                     end
                     res
                     add_to_interval_best!(state.interval_best, item_idx, res)
@@ -286,7 +286,7 @@ function generate_dt_cat_prog_quadgk_point_ability(state::ProgQuadGKDecisionTree
                         s2_idx = 2 * seg.seg_idx + 1
                         acc = acc - seg.vals
                     end
-                    seg_width = seg_width_at_depth(20.0f0, cur_depth)
+                    seg_width = seg_width_at_depth(theta_width, cur_depth)
                     res = 0f0 ± 0f0
                     for resp in false:true
                         ir = ItemResponse(state.item_bank.affines, item_idx, resp)
@@ -324,7 +324,7 @@ function generate_dt_cat_prog_quadgk_point_ability(state::ProgQuadGKDecisionTree
                     for resp in (false, true)
                         resize!(state.likelihood, state.state_tree.cur_depth)
                         push_question_response!(state.likelihood, state.item_bank, next_item, resp)
-                        ability = Slow.slow_mean_and_c(state.likelihood, -10.0f0, 10.0f0)[1]
+                        ability = Slow.slow_mean_and_c(state.likelihood, theta_lo, theta_hi)[1]
                         insert!(state.decision_tree_result, responses(state.likelihood), ability)
                     end
                 end

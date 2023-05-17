@@ -16,6 +16,10 @@ include("./pushvectors.jl")
 
 using .PushVectors: PushVector
 
+const theta_lo = -10.0f0
+const theta_hi = 10.0f0
+const theta_width = theta_hi - theta_lo
+
 include("./types.jl")
 include("./stats.jl")
 include("./dummydata.jl")
@@ -373,7 +377,7 @@ function generate_dt_cat_exhaustive_point_ability(state::DecisionTreeGenerationS
         @timeit "calculate gaussian quadrature points" begin
             # @fastmath @turbo 
             #lh_quad_xs, lh_quad_ws = gauss(state.likelihood, 5, -10.0f0, 10.0f0, rtol=1e-3)
-            lh_quad_xs, lh_quad_ws = state.weighted_gauss(state.likelihood, -10.0f0, 10.0f0, 1f-3)
+            lh_quad_xs, lh_quad_ws = state.weighted_gauss(state.likelihood, theta_lo, theta_hi, 1f-3)
         end
 
         ## Step 2. Compute a point estimate of ability
@@ -414,7 +418,7 @@ function generate_dt_cat_exhaustive_point_ability(state::DecisionTreeGenerationS
                     for resp in (false, true)
                         resize!(state.likelihood, state.state_tree.cur_depth)
                         push_question_response!(state.likelihood, state.item_bank, next_item, resp)
-                        lh_quad_xs, lh_quad_ws = state.weighted_gauss(state.likelihood, -10.0f0, 10.0f0, 1f-3)
+                        lh_quad_xs, lh_quad_ws = state.weighted_gauss(state.likelihood, theta_lo, theta_hi, 1f-3)
                         ability = calc_ability(state, lh_quad_xs, lh_quad_ws)
                         insert!(state.decision_tree_result, responses(state.likelihood), ability)
                     end
