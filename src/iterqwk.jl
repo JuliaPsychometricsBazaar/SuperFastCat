@@ -241,8 +241,6 @@ function generate_dt_cat_prog_quadgk_point_ability(state::ProgQuadGKDecisionTree
                 end
             end
 
-            #@info "Filtered" (length(state.item_bank) - length(state.likelihood)) length(state.interval_best)
-
             @timeit "adaptive passes" begin
                 cur_depth = 1
                 # Rule is to
