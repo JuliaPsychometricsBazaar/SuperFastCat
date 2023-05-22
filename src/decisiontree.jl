@@ -1,3 +1,4 @@
+# TODO: Remove ability tracking from here?
 Base.@kwdef struct AgendaItem
     depth::UInt32
     ability::Float32
