@@ -24,40 +24,46 @@ function SlowDecisionTreeGenerationState(item_bank::ItemBankT, max_depth)
     )
 end
 
-function generate_dt_cat_exhaustive_point_ability(state::SlowDecisionTreeGenerationState)
-    ## Step 0. Precompute item bank
-    @timeit "precompute item bank" begin
-        precompute!(state.item_bank)
+function best_item(state::SlowDecisionTreeGenerationState, ability)
+    best_ev = Inf
+    best_idx = -1
+    for item_idx in 1:length(state.item_bank)
+        if item_idx in questions(state.likelihood)
+            continue
+        end
+        #  expected_var(state.item_bank, state.ir_fx, lh_quad_xs, lh_quad_ws, ability, item_idx)
+        ev = Slow.slow_expected_var(state.item_bank.params, state.likelihood, ability, item_idx, theta_lo, theta_hi)
+        if ev < best_ev
+            best_ev = ev
+            best_idx = item_idx
+        end
     end
+    return best_idx
+end
 
+function calc_ability(state::SlowDecisionTreeGenerationState)
+    if state.state_tree.cur_depth == 0
+        return 0.0
+    else
+        Slow.slow_mean_and_c((x -> Slow.slow_likelihood(state.item_bank.params, state.likelihood, x)), theta_lo, theta_hi)[1]
+    end
+end
+
+function generate_dt_cat_exhaustive_point_ability(state::SlowDecisionTreeGenerationState)
     while true
-        ## Step 2. Compute a point estimate of ability
+        ## Step 1. Compute a point estimate of ability
         @timeit "calculate ability point estimate" begin
-            ability = Slow.slow_mean_and_c(state.likelihood, theta_lo, theta_hi)[1]
+            ability = calc_ability(state)
         end
         
-        ## Step 3. Find quickly the nearby ones
+        ## Step 2. Get best next item
         @timeit "next item rule" begin
-            best_ev = Inf
-            best_idx = -1
-            for item_idx in 1:length(state.item_bank)
-                if item_idx in questions(state.likelihood)
-                    continue
-                end
-                #  expected_var(state.item_bank, state.ir_fx, lh_quad_xs, lh_quad_ws, ability, item_idx)
-                ev = Slow.slow_expected_var(state.item_bank.params, state.likelihood, ability, item_idx, theta_lo, theta_hi)
-                if ev < best_ev
-                    best_ev = ev
-                    best_idx = item_idx
-                end
-            end
+            next_item = best_item(state, ability)
         end
         
-        if best_idx == -1
+        if next_item == -1
             error("No best item found")
         end
-        
-        next_item = best_idx
         
         @timeit "add to dt" begin
             insert!(state.decision_tree_result, responses(state.likelihood), ability, next_item)
@@ -66,7 +72,7 @@ function generate_dt_cat_exhaustive_point_ability(state::SlowDecisionTreeGenerat
                     for resp in (false, true)
                         resize!(state.likelihood, state.state_tree.cur_depth)
                         push_question_response!(state.likelihood, state.item_bank, next_item, resp)
-                        ability = Slow.slow_mean_and_c(state.likelihood, theta_lo, theta_hi)[1]
+                        ability = calc_ability(state)
                         insert!(state.decision_tree_result, responses(state.likelihood), ability)
                     end
                 end

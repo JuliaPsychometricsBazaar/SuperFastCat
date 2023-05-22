@@ -181,7 +181,6 @@ function seg_unnorm_var(state::ProgQuadGKDecisionTreeGenerationState, seg_width,
     evalrule(state.lh_fx_interval, seg_width, state.prog_quadgk.w, state.prog_quadgk.gw)
 end
 
-depth_at_seg_idx(seg_idx) = 8sizeof(typeof(seg_idx)) - leading_zeros(seg_idx)
 seg_width_at_depth(total_width, depth) = total_width * 2f0 ^ (-depth)
 
 function refine_mean_and_c(state::ProgQuadGKDecisionTreeGenerationState, seg_width, ir, seg_idx)
@@ -198,7 +197,7 @@ function refined_var_estimate(state::ProgQuadGKDecisionTreeGenerationState, segs
     unnorm_var_pt = 0f0
     unnorm_var_err = 0f0
     for seg in segs
-        depth = depth_at_seg_idx(seg.seg_idx)
+        depth = bintree_depth(seg.seg_idx)
         seg_width = seg_width_at_depth(theta_width, depth)
         seg_idx = seg.seg_idx
         seg_unnorm_var_pt, seg_unnorm_var_err = seg_unnorm_var(state, seg_width, ir, mean, seg_idx)
@@ -209,11 +208,17 @@ function refined_var_estimate(state::ProgQuadGKDecisionTreeGenerationState, segs
     unnorm_var / c
 end
 
+function precompute!(state::ProgQuadGKDecisionTreeGenerationState)
+    precompute!(state.item_bank)
+    precompute!(state.prog_quadgk)
+end
+
+iteration_precompute!(state::ProgQuadGKDecisionTreeGenerationState) = nothing
+
 function generate_dt_cat_prog_quadgk_point_ability(state::ProgQuadGKDecisionTreeGenerationState)
     ## Step 0. Precompute item bank
     @timeit "precompute item bank" begin
-        precompute!(state.item_bank)
-        precompute!(state.prog_quadgk)
+        precompute!(state)
     end
 
     while true

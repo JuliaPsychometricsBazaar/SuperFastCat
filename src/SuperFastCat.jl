@@ -20,6 +20,8 @@ const theta_lo = -10.0f0
 const theta_hi = 10.0f0
 const theta_width = theta_hi - theta_lo
 
+bintree_depth(idx) = 8sizeof(typeof(idx)) - leading_zeros(idx)
+
 include("./types.jl")
 include("./stats.jl")
 include("./dummydata.jl")
@@ -31,6 +33,7 @@ using .Quad
 export DecisionTreeGenerationState, ResponsesLikelihood, ItemBank
 export zero_subnormals_all, generate_dt_cat_exhaustive_point_ability
 export random_responses, clumpy_4pl_item_bank, push_question_response!
+export iteration_precompute!
 
 Base.@kwdef struct ItemBank
     params::ItemBankT
@@ -316,7 +319,7 @@ Base.@kwdef struct DecisionTreeGenerationState
     rough_best::RoughBest
 end
 
-function DecisionTreeGenerationState(item_bank::ItemBankT, max_depth, weighted_quadpts=5)
+function DecisionTreeGenerationState(item_bank::ItemBankT, max_depth; weighted_quadpts=5)
     # XXX: This is hardcoded for now, but should be found based on error estimate
     margin::Float32 = 0.1
     num_items = size(item_bank, 1)
@@ -334,13 +337,11 @@ function DecisionTreeGenerationState(item_bank::ItemBankT, max_depth, weighted_q
     )
 end
 
-function calc_ability(state::DecisionTreeGenerationState, x, w)::Float32
+function calc_ability(state::DecisionTreeGenerationState)::Float32
     if state.state_tree.cur_depth == 0
         return 0.0f0
     else
-        #llf = ResponsesLikelihood(precomputed, cur_depth)
-        #return optimize(llf, state.parent_ability, LBFGS(); autodiff = :forward)
-        return mean_and_c(x, w)[1]
+        return mean_and_c(abscissae(state.weighted_gauss), weights(state.weighted_gauss))[1]
     end
 end
 
@@ -370,62 +371,68 @@ end
     res 
 end=#
 
+function best_item(state::DecisionTreeGenerationState, ability)
+    best_ev = Inf
+    best_idx = -1
+    for item_idx in 1:length(state.item_bank)
+        if item_idx in questions(state.likelihood)
+            continue
+        end
+        ev = expected_var(
+            state.item_bank,
+            state.ir_fx,
+            abscissae(state.weighted_gauss),
+            weights(state.weighted_gauss),
+            ability,
+            item_idx
+        )
+        if ev < best_ev
+            best_ev = ev
+            best_idx = item_idx
+        end
+    end
+    return best_idx
+end
+
+function precompute!(state::DecisionTreeGenerationState)
+    precompute!(state.item_bank)
+end
+
+function iteration_precompute!(state::DecisionTreeGenerationState)
+    state.weighted_gauss(state.likelihood, theta_lo, theta_hi, 1f-3)
+end
+
 function generate_dt_cat_exhaustive_point_ability(state::DecisionTreeGenerationState)
     ## Step 0. Precompute item bank
     @timeit "precompute item bank" begin
-        precompute!(state.item_bank)
+        precompute!(state)
     end
 
     while true
-        #showqa(stdout, state.likelihood)
-        #println(stdout, responses_idx(state.likelihood.responses))
         ## Step 1. Get specialised gaussian quadrature points
         @timeit "calculate gaussian quadrature points" begin
-            # @fastmath @turbo 
-            #lh_quad_xs, lh_quad_ws = gauss(state.likelihood, 5, -10.0f0, 10.0f0, rtol=1e-3)
-            lh_quad_xs, lh_quad_ws = state.weighted_gauss(state.likelihood, theta_lo, theta_hi, 1f-3)
+            iteration_precompute!(state)
         end
 
         ## Step 2. Compute a point estimate of ability
         @timeit "calculate ability point estimate" begin
-            ability = calc_ability(state, lh_quad_xs, lh_quad_ws)
+            ability = calc_ability(state)
         end
         
         ## Step 3. Find quickly the nearby ones
         @timeit "rough calculation" begin
-            
-            empty!(state.rough_best)
-            # @fastmath @turbo 
-            for item_idx in 1:length(state.item_bank)
-                if item_idx in questions(state.likelihood)
-                    continue
-                end
-                #@info "expected_var" expected_var typeof(expected_var) isbits(expected_var)
-                #@timeit "add to rough best outer" begin
-                ev = expected_var(state.item_bank, state.ir_fx, lh_quad_xs, lh_quad_ws, ability, item_idx)
-                add_to_rough_best!(state.rough_best, item_idx, ev)
-                #end
-            end
+            next_item = best_item(state, ability)
         end
         
-        #@info "Filtered" (length(state.item_bank) - length(state.likelihood)) length(state.rough_best)
-        
-        ## Step 4. Exact calculation with QuadGK TODO
-        #for (item_idx, expected_var) in rough_best.bests
-            #ir = ItemResponse(state.item_bank, item_idx, resp)
-            #prob = ir(x)``
-            #add_to_rough_best!(rough_best, item_idx, expected_var)
-        #end
         @timeit "select next item and add to dt" begin
-            next_item = state.rough_best.best_idxs[1]
             insert!(state.decision_tree_result, responses(state.likelihood), ability, next_item)
             if state.state_tree.cur_depth == state.state_tree.max_depth
                 @timeit "final state ability calculation" begin
                     for resp in (false, true)
                         resize!(state.likelihood, state.state_tree.cur_depth)
                         push_question_response!(state.likelihood, state.item_bank, next_item, resp)
-                        lh_quad_xs, lh_quad_ws = state.weighted_gauss(state.likelihood, theta_lo, theta_hi, 1f-3)
-                        ability = calc_ability(state, lh_quad_xs, lh_quad_ws)
+                        state.weighted_gauss(state.likelihood, theta_lo, theta_hi, 1f-3)
+                        ability = calc_ability(state)
                         insert!(state.decision_tree_result, responses(state.likelihood), ability)
                     end
                 end
