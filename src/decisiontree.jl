@@ -35,7 +35,7 @@ function next!(state::TreePosition, lh, item_bank, question, ability)
             state.parent_ability = todo.ability
             state.cur_depth = todo.depth
             resize!(lh, todo.depth)
-            lh.responses[todo.depth] = true
+            replace_question_response!(lh, item_bank, question, true)
             #@info "next backtrack" state.cur_depth state.max_depth lh.questions lh.responses
         else
             # Done: break

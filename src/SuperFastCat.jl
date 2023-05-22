@@ -79,6 +79,10 @@ end
 
 function push_question_response!(lh::ResponsesLikelihood, item_bank::ItemBank, question, response)
     lh.length += 1
+    replace_question_response!(lh, item_bank, question, response)
+end
+
+function replace_question_response!(lh::ResponsesLikelihood, item_bank::ItemBank, question, response)
     lh.questions[lh.length] = question
     lh.responses[lh.length] = response
     question_affs = @view item_bank.affines[question, :]
