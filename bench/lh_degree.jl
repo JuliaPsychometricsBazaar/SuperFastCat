@@ -16,7 +16,7 @@ using SuperFastCat.Slow
 using Base.Iterators: take
 using GLMakie
 
-include("./bench/utils.jl")
+include("./utils.jl")
 
 
 function coef_coverage(f, lo, hi)
