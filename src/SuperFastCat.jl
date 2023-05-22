@@ -23,8 +23,10 @@ const theta_width = theta_hi - theta_lo
 include("./types.jl")
 include("./stats.jl")
 include("./dummydata.jl")
-include("./wgauss.jl")
+include("./Quad/Quad.jl")
 include("./decisiontree.jl")
+
+using .Quad
 
 export DecisionTreeGenerationState, ResponsesLikelihood, ItemBank
 export zero_subnormals_all, generate_dt_cat_exhaustive_point_ability
