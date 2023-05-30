@@ -6,7 +6,7 @@ based one
 
 using Random: Xoshiro
 using SuperFastCat
-using SuperFastCat: ProgQuadGKDecisionTreeGenerationState, responses_idx, bintree_depth, questions, theta_lo, theta_hi, calc_ability, responses, next!, precompute!
+using SuperFastCat: ProgQuadGKDecisionTreeGenerationState, responses_idx, bintree_depth, questions, theta_lo, theta_hi, calc_ability, responses, next!, precompute!, best_item, summarize_items
 using SuperFastCat.Slow
 using TimerOutputs
 
@@ -17,8 +17,8 @@ function walk(rw, slow_state; other_states...)
         precompute!(state)
     end
     while true
-        @show "Responses"
-        @show responses(slow_state.likelihood)
+        #@show "Responses"
+        #@show responses(slow_state.likelihood)
         ridx = responses_idx(responses(slow_state.likelihood))
         depth = bintree_depth(ridx)
         slow_ability = calc_ability(slow_state)
@@ -31,26 +31,15 @@ function walk(rw, slow_state; other_states...)
             push!(items, (ev, item_idx))
         end
         sort!(items, by=x->x[1])
-        @show "items" items
+        #@show items
         for (name, state) in other_states
-            @show name
-            @show responses(state.likelihood)
+            #@show name
+            #@show responses(state.likelihood)
             iteration_precompute!(state)
-            best_ev = Inf
-            best_idx = -1
             state_ability = calc_ability(state)
-            @show "ability" slow_ability state_ability
-            for item_idx in 1:length(state.item_bank)
-                if item_idx in questions(state.likelihood)
-                    continue
-                end
-                ev = Slow.slow_expected_var(state.item_bank.params, state.likelihood, state_ability, item_idx, theta_lo, theta_hi)
-                if ev < best_ev
-                    best_ev = ev
-                    best_idx = item_idx
-                end
-            end
-            @info "best_idx" name best_idx
+            #@show "ability" slow_ability state_ability
+            best_idx = best_item(state, state_ability)
+            #@show "best_idx" name best_idx
             for (k, (_, gold_idx)) in enumerate(items)
                 if best_idx == gold_idx
                     write_rec(
@@ -81,7 +70,7 @@ function main(outfn)
     zero_subnormals_all()
     
     rng = Xoshiro(42)
-    params = clumpy_4pl_item_bank(rng, 3, 1000) # 1000
+    params = clumpy_4pl_item_bank(rng, 3, 1000)
     max_depth = 5
     state = SlowDecisionTreeGenerationState(params, max_depth)
     open_rec_writer(outfn) do rw
