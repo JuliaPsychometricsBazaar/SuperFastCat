@@ -12,9 +12,9 @@ using TimerOutputs
 
 include("./utils.jl")
 
-function walk(rw, slow_state; other_states...)
-    for (_, state) in other_states
-        precompute!(state)
+function walk(rw, slow_state, systems)
+    for system in systems
+        precompute!(system[:state])
     end
     while true
         #@show "Responses"
@@ -32,23 +32,28 @@ function walk(rw, slow_state; other_states...)
         end
         sort!(items, by=x->x[1])
         #@show items
-        for (name, state) in other_states
-            #@show name
-            #@show responses(state.likelihood)
-            iteration_precompute!(state)
-            state_ability = calc_ability(state)
-            #@show "ability" slow_ability state_ability
-            best_idx = best_item(state, state_ability)
-            #@show "best_idx" name best_idx
+        for system in systems
+            name = system[:name]
+            state = system[:state]
+            timing = @timed begin
+                #@show name
+                #@show responses(state.likelihood)
+                iteration_precompute!(state)
+                state_ability = calc_ability(state)
+                #@show "ability" slow_ability state_ability
+                best_idx = best_item(state, state_ability)
+                #@show "best_idx" name best_idx
+            end
             for (k, (_, gold_idx)) in enumerate(items)
                 if best_idx == gold_idx
                     write_rec(
                         rw;
                         ridx=ridx,
                         depth=depth ,
-                        type="item_params",
+                        type="next_item",
                         system=name,
-                        k=k
+                        k=k,
+                        time=timing[:time]
                     )
                     break
                 end
@@ -56,7 +61,8 @@ function walk(rw, slow_state; other_states...)
         end
         next_item = items[1][2]
         insert!(slow_state.decision_tree_result, responses(slow_state.likelihood), slow_ability, next_item)
-        for (_, state) in other_states
+        for system in systems
+            state = system[:state]
             next!(state.state_tree, state.likelihood, state.item_bank, next_item, slow_ability)
         end
         if next!(slow_state.state_tree, slow_state.likelihood, slow_state.item_bank, next_item, slow_ability)
@@ -73,13 +79,14 @@ function main(outfn)
     params = clumpy_4pl_item_bank(rng, 3, 1000)
     max_depth = 5
     state = SlowDecisionTreeGenerationState(params, max_depth)
+    other_states = [
+        Dict(:name => :fixedw_5, :weighted_quadpts => 5, :state => FixedWDecisionTreeGenerationState(params, max_depth; weighted_quadpts=5)),
+        Dict(:name => :fixedw_8, :weighted_quadpts => 8, :state => FixedWDecisionTreeGenerationState(params, max_depth; weighted_quadpts=8)),
+        Dict(:name => :fixedw_11, :weighted_quadpts => 11, :state => FixedWDecisionTreeGenerationState(params, max_depth; weighted_quadpts=11)),
+        Dict(:name => :iterqwk, :state => ProgQuadGKDecisionTreeGenerationState(params, max_depth; quad_order=5, quad_max_depth=4)),
+    ]
     open_rec_writer(outfn) do rw
-        walk(
-            rw,
-            state;
-            fixedw=DecisionTreeGenerationState(params, max_depth; weighted_quadpts=5),
-            iterqwk=ProgQuadGKDecisionTreeGenerationState(params, max_depth; quad_order=5, quad_max_depth=4),
-      )
+        walk(rw, state, other_states)
     end
 end
 

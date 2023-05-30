@@ -13,7 +13,7 @@ function main()
 
     max_depth = 20
     state = SlowDecisionTreeGenerationState(params, max_depth)
-    fixedw = DecisionTreeGenerationState(params, max_depth; weighted_quadpts=5)
+    fixedw = FixedWDecisionTreeGenerationState(params, max_depth; weighted_quadpts=5)
     iterqwk = ProgQuadGKDecisionTreeGenerationState(params, max_depth; quad_order=5, quad_max_depth=4)
     states = [state, fixedw, iterqwk]
     
