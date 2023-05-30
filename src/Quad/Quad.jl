@@ -5,13 +5,15 @@ allocations.
 
 module Quad
 
-using LinearAlgebra: eigen!, SymTridiagonal, LAPACK
+using LinearAlgebra: eigen!, SymTridiagonal, LAPACK, norm
 using RecursiveArrayTools
 using QuadGK
 
-export WeightedGauss, AvgWeightedGauss, abscissae, weights
+export WeightedGauss, AvgWeightedGauss, abscissae, weights, ProgQuadGK, evalrule, seg_child_idxs, seg_width_at_depth
 
 abstract type WeightedGaussBase end
+
+include("./adapt.jl")
 
 abscissae(wgb::WeightedGaussBase) = @view wgb.points_buf[:, 1]
 weights(wgb::WeightedGaussBase) = @view wgb.points_buf[:, 2]
@@ -190,9 +192,9 @@ function avg_gauss(wg)
         (@view wg.beta[begin + 1:end - 1]), # β_1, ... β_{l};  e.g. β_1, β_2, β_3
         (@view wg.beta[end - 1: -1:begin + 1]) # β_{l}, ... β_1;  e.g. β_3, β_2, β_1
     )
-    @info "dv, ev"
-    @show dv
-    @show ev
+    #@info "dv, ev"
+    #@show dv
+    #@show ev
 
     # Uses stemr == RRR rther than QR internally
     return LAPACK.stegr!('V', dv, ev)
@@ -218,9 +220,9 @@ function optimal_avg_gauss(wg)
         (@view wg.beta[begin + 1:end]), # β_1, ... β_{l+1};  e.g. β_1, β_2, β_3, β_4
         (@view wg.beta[end - 2: -1:begin + 1]) # β_{l-1}, ... β_1;  e.g. β_2, β_1
     )
-    @info "dv, ev"
-    @show dv
-    @show ev
+    #@info "dv, ev"
+    #@show dv
+    #@show ev
 
     return LAPACK.stegr!('V', dv, ev)
 end
@@ -236,15 +238,15 @@ function (wg::AvgWeightedGauss)(W, a, b, rtol, quad=quadgk)
     lanczos_jacobi_coeffs!(W, wg.N + 2, a, b, xscale, wint, rtol, wg.q_0, wg.q_1, wg.v, wg.alpha, wg.beta, wg.segbuf, quad)
     # wg.alpha contains α_0, α_1, α_2, ..., α_{l+1}
     # wg.beta contain β_0, β_1, β_2, ..., β_{l+1}
-    @show "alpha, beta"
-    @show wg.alpha
-    @show wg.beta
+    #@show "alpha, beta"
+    #@show wg.alpha
+    #@show wg.beta
     
     values, vectors = optimal_avg_gauss(wg)
 
-    @info "vals, vecs"
-    @show values
-    @show vectors
+    #@info "vals, vecs"
+    #@show values
+    #@show vectors
 
     xs = @view wg.points_buf[:, 1]
     ws = @view wg.points_buf[:, 2]

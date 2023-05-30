@@ -1,7 +1,7 @@
 using Base.Order: By
 
-const PartialMeanAndCT = SVector{4, Float32}
-const zero_partial_mean_and_c = SVector(0.0f0, 0.0f0, 0.0f0, 0.0f0)
+const PartialMeanAndCT = SMatrix{4, 2, Float32}
+const zero_partial_mean_and_c = @SMatrix zeros(Float32, 4, 2)
 const c_pt_idx = 1
 const c_err_idx = 2 
 const unnorm_mean_pt_idx = 3
@@ -17,7 +17,7 @@ Base.isless(i::Segment, j::Segment) = isless(i.vals[c_err_idx], j.vals[c_err_idx
 @kwdef struct IntervalBestEntry
     item_bank_idx::Int
     best_measure::Float32
-    depth::Int
+    num_expansions::Int
     acc::PartialMeanAndCT=zero_partial_mean_and_c
     segs::Union{Vector{Segment}, Nothing}=nothing
 end
@@ -46,6 +46,19 @@ function IntervalBest(ordering::Ordering, capacity::Int)
     )
 end
 
+function summary(item::IntervalBestEntry)
+    return "<IntervalBestEntry item_bank_idx: $(item.item_bank_idx) best_measure: $(item.best_measure) num_expansions: $(item.num_expansions)>"
+end
+
+function summarize_items(bests::IntervalBest)
+    summarized_contents = join([summary(e) for e in bests.contents], " ")
+    return """
+    IntervalBest:
+        best_worst_measure: $(bests.best_worst_measure)
+        contents ($(length(bests.contents))): $(summarized_contents)
+    """
+end
+
 interval_best(::KnownForwardOrderings, interval) = inf(interval)
 interval_best(::KnownReverseOrderings, interval) = sup(interval)
 interval_best(best::IntervalBest, interval) = interval_best(best.ordering.order, interval)
@@ -63,10 +76,10 @@ end
 function add_to_interval_best!(bests::IntervalBest, item_bank_idx, measure)
     new_measure_worst = interval_worst(bests, measure)
     new_measure_best = interval_best(bests, measure)
-    new_entry = IntervalBestEntry(item_bank_idx=item_bank_idx, best_measure=new_measure_best, depth=1)
+    new_entry = IntervalBestEntry(item_bank_idx=item_bank_idx, best_measure=new_measure_best, num_expansions=1)
     if length(bests.contents) == 0
         # First item
-        push!(bests.contents, IntervalBestEntry(item_bank_idx=item_bank_idx, best_measure=new_measure_best, depth=1))
+        push!(bests.contents, IntervalBestEntry(item_bank_idx=item_bank_idx, best_measure=new_measure_best, num_expansions=1))
         bests.best_worst_measure = new_measure_worst
     else
         if lt(bests.ordering, new_measure_worst, bests.best_worst_measure)
@@ -96,8 +109,8 @@ function update_measure!(bests::IntervalBest, update_idx, new_measure, acc, segs
     new_measure_best = interval_best(bests, new_measure)
     bests_entry = bests.contents[update_idx]
     item_bank_idx = bests_entry.item_bank_idx
-    depth = bests_entry.depth
-    new_entry = IntervalBestEntry(item_bank_idx, new_measure_best, depth + 1, acc, segs)
+    num_expansions = bests_entry.num_expansions
+    new_entry = IntervalBestEntry(item_bank_idx, new_measure_best, num_expansions + 1, acc, segs)
     new_idx = nothing
     if lt(bests.ordering, new_measure_worst, bests.best_worst_measure)
         # Added item is new best-worst
