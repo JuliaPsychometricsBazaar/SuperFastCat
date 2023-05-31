@@ -76,17 +76,25 @@ function main(outfn)
     zero_subnormals_all()
     
     rng = Xoshiro(42)
-    params = clumpy_4pl_item_bank(rng, 3, 1000)
+    params = clumpy_4pl_item_bank(rng, 3, 10000)
     max_depth = 5
     state = SlowDecisionTreeGenerationState(params, max_depth)
-    other_states = [
-        Dict(:name => :fixedw_5, :weighted_quadpts => 5, :state => FixedWDecisionTreeGenerationState(params, max_depth; weighted_quadpts=5)),
-        Dict(:name => :fixedw_8, :weighted_quadpts => 8, :state => FixedWDecisionTreeGenerationState(params, max_depth; weighted_quadpts=8)),
-        Dict(:name => :fixedw_11, :weighted_quadpts => 11, :state => FixedWDecisionTreeGenerationState(params, max_depth; weighted_quadpts=11)),
+    systems = [
+        Dict(:name => :fixedw_5_tm3, :weighted_quadpts => 5, :tolerance => 1f-3, :state => FixedWDecisionTreeGenerationState(params, max_depth; weighted_quadpts=5)),
+        Dict(:name => :fixedw_8_tm3, :weighted_quadpts => 8, :tolerance => 1f-3, :state => FixedWDecisionTreeGenerationState(params, max_depth; weighted_quadpts=8)),
+        Dict(:name => :fixedw_11_tm3, :weighted_quadpts => 11, :tolerance => 1f-3, :state => FixedWDecisionTreeGenerationState(params, max_depth; weighted_quadpts=11)),
+        Dict(:name => :fixedw_20_tm3, :weighted_quadpts => 20, :tolerance => 1f-3, :state => FixedWDecisionTreeGenerationState(params, max_depth; weighted_quadpts=20)),
+        Dict(:name => :fixedw_5_tm5, :weighted_quadpts => 5, :tolerance => 1f-5, :state => FixedWDecisionTreeGenerationState(params, max_depth; weighted_quadpts=5)),
+        Dict(:name => :fixedw_8_tm5, :weighted_quadpts => 8, :tolerance => 1f-5, :state => FixedWDecisionTreeGenerationState(params, max_depth; weighted_quadpts=8)),
+        Dict(:name => :fixedw_11_tm5, :weighted_quadpts => 11, :tolerance => 1f-5, :state => FixedWDecisionTreeGenerationState(params, max_depth; weighted_quadpts=11)),
+        Dict(:name => :fixedw_20_tm5, :weighted_quadpts => 20, :tolerance => 1f-5, :state => FixedWDecisionTreeGenerationState(params, max_depth; weighted_quadpts=20)),
         Dict(:name => :iterqwk, :state => ProgQuadGKDecisionTreeGenerationState(params, max_depth; quad_order=5, quad_max_depth=4)),
     ]
     open_rec_writer(outfn) do rw
-        walk(rw, state, other_states)
+        for system in systems
+            write_rec(rw; type="system", filter(p -> p.first ≠ :state, system)...)
+        end
+        walk(rw, state, systems)
     end
 end
 
