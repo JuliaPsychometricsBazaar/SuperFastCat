@@ -8,6 +8,8 @@ Base.@kwdef struct FixedWDecisionTreeGenerationState
     # Input
     # \- Input / Item bank
     item_bank::ItemBank
+    # \- Input / tolerance
+    tolerance::Float32
     # State
     # \- State / Likelihood
     likelihood::ResponsesLikelihood
@@ -27,13 +29,14 @@ Base.@kwdef struct FixedWDecisionTreeGenerationState
     rough_best::RoughBest
 end
 
-function FixedWDecisionTreeGenerationState(item_bank::ItemBankT, max_depth; weighted_quadpts=5)
+function FixedWDecisionTreeGenerationState(item_bank::ItemBankT, max_depth; weighted_quadpts=5, tolerance=1f-3)
     # XXX: This is hardcoded for now, but should be found based on error estimate
     margin::Float32 = 0.1
     num_items = size(item_bank, 1)
     rough_best = RoughBest(FastForwardOrdering(), ceil(Int, sqrt(num_items) + 3), margin)
     FixedWDecisionTreeGenerationState(
         item_bank=ItemBank(item_bank),
+        tolerance=tolerance,
         likelihood=ResponsesLikelihood(max_depth + 1), # +1 for final ability estimates
         state_tree=TreePosition(max_depth),
         decision_tree_result=DecisionTree(max_depth),
@@ -106,7 +109,7 @@ function precompute!(state::FixedWDecisionTreeGenerationState)
 end
 
 function iteration_precompute!(state::FixedWDecisionTreeGenerationState)
-    state.weighted_gauss(state.likelihood, theta_lo, theta_hi, 1f-3)
+    state.weighted_gauss(state.likelihood, theta_lo, theta_hi, state.tolerance)
 end
 
 function generate_dt_cat_exhaustive_point_ability(state::FixedWDecisionTreeGenerationState)
@@ -138,7 +141,7 @@ function generate_dt_cat_exhaustive_point_ability(state::FixedWDecisionTreeGener
                     for resp in (false, true)
                         resize!(state.likelihood, state.state_tree.cur_depth)
                         push_question_response!(state.likelihood, state.item_bank, next_item, resp)
-                        state.weighted_gauss(state.likelihood, theta_lo, theta_hi, 1f-3)
+                        state.weighted_gauss(state.likelihood, theta_lo, theta_hi, state.tolerance)
                         ability = calc_ability(state)
                         insert!(state.decision_tree_result, responses(state.likelihood), ability)
                     end
