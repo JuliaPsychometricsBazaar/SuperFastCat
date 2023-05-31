@@ -23,6 +23,7 @@ function write_rec(rw::RecWriter; kwargs...)
     #@info "write_rec" out_rec
     JSON3.write(rw.io, out_rec)
     println(rw.io)
+    flush(rw.io)
 end
 
 function proc_timed(timed)
