@@ -30,7 +30,8 @@ include("./decisiontree.jl")
 
 using .Quad
 
-export FixedWDecisionTreeGenerationState, ResponsesLikelihood, ItemBank
+export FixedRectDecisionTreeGenerationState, FixedWDecisionTreeGenerationState
+export ResponsesLikelihood, ItemBank
 export zero_subnormals_all, generate_dt_cat_exhaustive_point_ability
 export random_responses, clumpy_4pl_item_bank, push_question_response!
 export iteration_precompute!
@@ -206,6 +207,7 @@ end
 using SnoopPrecompile
 
 include("./fixedw.jl")
+include("./fixedrect.jl")
 include("./Slow.jl")
 include("./slow_trees.jl")
 

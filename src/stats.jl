@@ -33,9 +33,22 @@ As with `mean_and_c` but also returns the variance of the distribution:
 """
 function var_mean_and_c(x, w, fx)
     mean, norm = mean_and_c(x, w, fx)
-    raw_var = 0f0
+    raw_var = zero(eltype(x))
     @fastmath @turbo for i in eachindex(x)
         raw_var += w[i] * fx[i] * (x[i] - mean) ^ 2
+    end
+    (
+        raw_var / norm,
+        mean,
+        norm
+    )
+end
+
+function var_mean_and_c(x, w)
+    mean, norm = mean_and_c(x, w)
+    raw_var = zero(eltype(x))
+    @fastmath @turbo for i in eachindex(x)
+        raw_var += w[i] * (x[i] - mean) ^ 2
     end
     (
         raw_var / norm,

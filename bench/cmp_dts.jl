@@ -31,33 +31,40 @@ function walk(rw, slow_state, systems)
             push!(items, (ev, item_idx))
         end
         sort!(items, by=x->x[1])
-        #@show items
         for system in systems
             name = system[:name]
             state = system[:state]
             timing = @timed begin
-                #@show name
-                #@show responses(state.likelihood)
                 iteration_precompute!(state)
                 state_ability = calc_ability(state)
-                #@show "ability" slow_ability state_ability
                 best_idx = best_item(state, state_ability)
-                #@show "best_idx" name best_idx
             end
-            for (k, (_, gold_idx)) in enumerate(items)
-                if best_idx == gold_idx
-                    write_rec(
-                        rw;
-                        ridx=ridx,
-                        depth=depth ,
-                        type="next_item",
-                        system=name,
-                        k=k,
-                        time=timing[:time]
-                    )
-                    break
-                end
+            write_rec(
+                rw;
+                ridx=ridx,
+                depth=depth ,
+                type="next_item",
+                gold_ability=false,
+                name=string(name) * "_own_ability",
+                system_name=name,
+                k=findfirst(x -> x[2] == best_idx, items),
+                time=timing[:time]
+            )
+            gold_ability_f32 = Float32(slow_ability)
+            timing = @timed begin
+                best_idx = best_item(state, gold_ability_f32)
             end
+            write_rec(
+                rw;
+                ridx=ridx,
+                depth=depth ,
+                type="next_item",
+                gold_ability=true,
+                name=string(name) * "_gold_ability",
+                system_name=name,
+                k=findfirst(x -> x[2] == best_idx, items),
+                time=timing[:time]
+            )
         end
         next_item = items[1][2]
         insert!(slow_state.decision_tree_result, responses(slow_state.likelihood), slow_ability, next_item)
@@ -89,6 +96,10 @@ function main(outfn)
         Dict(:name => :fixedw_11_tm5, :weighted_quadpts => 11, :tolerance => 1f-5, :state => FixedWDecisionTreeGenerationState(params, max_depth; weighted_quadpts=11)),
         Dict(:name => :fixedw_20_tm5, :weighted_quadpts => 20, :tolerance => 1f-5, :state => FixedWDecisionTreeGenerationState(params, max_depth; weighted_quadpts=20)),
         Dict(:name => :iterqwk, :state => ProgQuadGKDecisionTreeGenerationState(params, max_depth; quad_order=5, quad_max_depth=4)),
+        Dict(:name => :fixedrect_61, :state => FixedRectDecisionTreeGenerationState(params, max_depth; quadpts=61)),
+        Dict(:name => :fixedrect_31, :state => FixedRectDecisionTreeGenerationState(params, max_depth; quadpts=31)),
+        Dict(:name => :fixedrect_20, :state => FixedRectDecisionTreeGenerationState(params, max_depth; quadpts=15)),
+        Dict(:name => :fixedrect_11, :state => FixedRectDecisionTreeGenerationState(params, max_depth; quadpts=11))
     ]
     open_rec_writer(outfn) do rw
         for system in systems
