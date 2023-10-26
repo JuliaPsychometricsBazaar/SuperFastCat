@@ -1,3 +1,53 @@
+Base.@kwdef struct FixedRectSimState{F}
+    # Input
+    # \- Input / Item bank
+    item_bank::ItemBank
+    # \- Input / Response getter
+    get_response::F
+    # State
+    # \- State / Likelihood
+    likelihood::ResponsesLikelihood
+    # Buffers
+    # \- Buffers / integration points
+    quadpts::Vector{Float32}
+    # \- Buffers / lh(x) values at integration points
+    lh_x::Vector{Float32}
+    # \- Buffers / f(x) values at integration points
+    ir_fx::Vector{Float32}
+end
+
+function FixedRectSimState(item_bank::ItemBankT, get_response, max_depth; quadpts=39)
+    FixedRectSimState(
+        item_bank=ItemBank(item_bank),
+        get_response=get_response,
+        likelihood=ResponsesLikelihood(max_depth + 1), # +1 for final ability estimates
+        quadpts=collect(range(theta_lo, theta_hi, quadpts)),
+        lh_x=Vector{Float32}(undef, quadpts),
+        ir_fx=Vector{Float32}(undef, quadpts)
+    )
+end
+
+function get_next_item!(state)
+    ## Step 1. Get specialised gaussian quadrature points
+    iteration_precompute!(state)
+
+    ## Step 2. Compute a point estimate of ability
+    ability = calc_ability(state)
+    
+    ## Step 3. Find quickly the nearby ones
+    return best_item(state, ability)
+end
+
+function advance_next_item!(state)
+    best_item = get_next_item!(state)
+    resp = state.get_response(best_item)
+    push_question_response!(state.likelihood, state.item_bank, best_item, resp)
+end
+
+function advance_next_item!(state, i, resp)
+    push_question_response!(state.likelihood, state.item_bank, i, resp)
+end
+
 Base.@kwdef struct FixedRectDecisionTreeGenerationState
     # Input
     # \- Input / Item bank
@@ -31,8 +81,10 @@ function FixedRectDecisionTreeGenerationState(item_bank::ItemBankT, max_depth; q
     )
 end
 
-function calc_ability(state::FixedRectDecisionTreeGenerationState)::Float32
-    if state.state_tree.cur_depth == 0
+const AnyFixedRectState = Union{FixedRectSimState, FixedRectDecisionTreeGenerationState}
+
+function calc_ability(state::AnyFixedRectState)::Float32
+    if length(state.likelihood) == 0
         return 0.0f0
     else
         return mean_and_c(state.quadpts, state.lh_x)[1]
@@ -52,7 +104,7 @@ function rect_expected_var(item_bank, lh, ir_fx_buf, pts, ability, item_idx)::Fl
     res 
 end
 
-function best_item(state::FixedRectDecisionTreeGenerationState, ability)
+function best_item(state::AnyFixedRectState, ability)
     best_ev = Inf
     best_idx = -1
     for item_idx in 1:length(state.item_bank)
@@ -75,15 +127,15 @@ function best_item(state::FixedRectDecisionTreeGenerationState, ability)
     return best_idx
 end
 
-function precompute!(state::FixedRectDecisionTreeGenerationState)
+function precompute!(state::AnyFixedRectState)
     precompute!(state.item_bank)
 end
 
-function iteration_precompute!(state::FixedRectDecisionTreeGenerationState)
+function iteration_precompute!(state::AnyFixedRectState)
     state.lh_x .= state.likelihood.(state.quadpts)
 end
 
-function generate_dt_cat_exhaustive_point_ability(state::FixedRectDecisionTreeGenerationState)
+function generate_dt_cat_exhaustive_point_ability(state::AnyFixedRectState)
     ## Step 0. Precompute item bank
     @timeit "precompute item bank" begin
         precompute!(state)
