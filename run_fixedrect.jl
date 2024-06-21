@@ -15,7 +15,7 @@ function main()
             max_depth = 8
         end
         @timeit "Allocate" begin
-            state = FixedWDecisionTreeGenerationState(params, max_depth)
+            state = FixedRectDecisionTreeGenerationState(params, max_depth)
         end
         @timeit "generate_dt_cat_exhaustive_point_ability" begin
             dt_cat = generate_dt_cat_exhaustive_point_ability(state)

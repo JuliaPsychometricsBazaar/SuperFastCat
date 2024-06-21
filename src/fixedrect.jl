@@ -16,7 +16,7 @@ Base.@kwdef struct FixedRectSimState{F}
     ir_fx::Vector{Float32}
 end
 
-function FixedRectSimState(item_bank::ItemBankT, get_response, max_depth; quadpts=39)
+function FixedRectSimState(item_bank::ItemBankT, get_response, max_depth; quadpts=61, theta_lo=theta_lo, theta_hi=theta_hi)
     FixedRectSimState(
         item_bank=ItemBank(item_bank),
         get_response=get_response,
@@ -69,7 +69,7 @@ Base.@kwdef struct FixedRectDecisionTreeGenerationState
     ir_fx::Vector{Float32}
 end
 
-function FixedRectDecisionTreeGenerationState(item_bank::ItemBankT, max_depth; quadpts=39)
+function FixedRectDecisionTreeGenerationState(item_bank::ItemBankT, max_depth; quadpts=61, theta_lo=theta_lo, theta_hi=theta_hi)
     FixedRectDecisionTreeGenerationState(
         item_bank=ItemBank(item_bank),
         likelihood=ResponsesLikelihood(max_depth + 1), # +1 for final ability estimates
